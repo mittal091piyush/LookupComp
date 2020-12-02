@@ -1,0 +1,217 @@
+<aura:component controller="LookupController"> 
+    <aura:attribute Name="selItem" type="object" access="public" 
+                    description="This attribute can be used by parent component to read selected record"/>  
+    <aura:attribute Name="server_result" type="object[]" access="private" /> 
+    
+    <aura:attribute name="lookupIcon" type="String" access="public" default="standard:contact"/>
+    
+    <aura:attribute name="label" type="String" access="public" 
+                    description="label to show on UI"/>
+    <aura:attribute name="disableStr" type="boolean" access="public" 
+                    description="disbale search" default="true"/>
+	<aura:attribute name="showLoading" type="boolean" access="private" 
+                    description="show inline loading" default="false"/>
+    <aura:attribute name="objectName" type="String" access="public" 
+                    description="Name of Object to be searched"/>
+    <aura:attribute name="field_API_text" type="String" access="public" 
+                    description="API Name of field, to be used to show text"/>
+    <aura:attribute name="field_API_val" type="String" access="public" 
+                    description="API Name of field, to be returned from component"/>
+    <aura:attribute name="field_API_search" type="String" access="public" 
+                    description="API Name of field to be searched"/>
+    <aura:attribute name="limit" type="Integer" access="public" default="5" 
+                    description="Total number of record to be returned"/>
+    <aura:attribute name="placeholder" type="String" access="public" 
+                    default="Space character is used to search" />
+    
+    <aura:attribute name="last_SearchText" type="String" access="private" />
+    <aura:attribute name="last_ServerResult" type="object[]" access="private" /> 
+    
+    <div class="slds">      
+        <div class="slds-form-element"> 
+            <label class="slds-form-element__label" for="form-element-01">{#v.label}</label>
+            <div class="slds-form-element__control">                
+                <div class="slds-combobox_container">
+                    <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click slds-is-open" 
+                         aria-expanded="true" aria-haspopup="listbox" role="combobox">
+                        <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                            <aura:if isTrue="{! empty(v.selItem) }"> 
+                                
+                                <input type="text" class="slds-input slds-combobox__input" id="combobox-unique-id" 
+                                           aria-activedescendant="listbox-option-unique-id-01" aria-autocomplete="list" 
+                                           aria-controls="listbox-unique-id" autocomplete="off" role="combobox" 
+                                           placeholder="{!v.placeholder}" 
+                                           onkeyup="{!c.serverCall}" disabled="{!v.disableStr}"/>
+                                <aura:if isTrue="{!v.showLoading}">
+                                    <div class="slds-input__icon-group slds-input__icon-group_right">
+                                        <div role="status" class="slds-spinner slds-spinner_brand slds-spinner_x-small slds-input__spinner">
+                                            <span class="slds-assistive-text">Loading</span>
+                                            <div class="slds-spinner__dot-a"></div>
+                                            <div class="slds-spinner__dot-b"></div>
+                                        </div>	
+                                    </div>
+                                </aura:if>
+                                    <aura:set attribute="else"> 
+                                        <span class="slds-pill slds-pill_link fullWidth"> 
+                                            <a href="javascript:void(0);" 
+                                               class="slds-pill__action slds-p-left_x-small" title="{#v.selItem.text}">
+                                                <lightning:icon iconName="{#v.lookupIcon}" size="x-small"/>
+                                                <span class="slds-pill__label slds-p-left_x-small">{#v.selItem.text}</span>
+                                            </a>
+                                            <button onclick="{!c.clearSelection}" 
+                                                    class="slds-button slds-button_icon slds-button_icon slds-pill__remove" 
+                                                    title="Remove">
+                                                <lightning:icon iconName="utility:close" size="small" 
+                                                                alternativeText="Press delete or backspace to remove"/>
+                                                <span class="slds-assistive-text" >Remove</span>
+                                            </button>
+                                        </span> 
+                                    </aura:set>
+                                </aura:if> 
+                        </div>
+                        <aura:if isTrue="{! greaterthanorequal(v.server_result.length,1) }"> 
+                            <div id="listbox-unique-id" role="listbox">
+                                <ul class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid" role="presentation"
+                                    style="display: block; min-width: auto; max-width: 100% ; width: 100%;">
+                                    <aura:iteration items="{!v.server_result}" var="item" indexVar="i">
+                                        <li role="presentation" class="slds-listbox__item" data-selectedIndex="{#i}" 
+                                            onclick="{!c.itemSelected}">
+                                            <span id="{#'listbox-option-unique-id-'+i+1}"  
+                                                  class="slds-media slds-listbox__option slds-listbox__option_entity 
+                                                         slds-listbox__option_has-meta" 
+                                                  role="option">
+                                                <span class="slds-media__figure optionIcon">
+                                                    <span class="slds-icon_container" >
+                                                        <lightning:icon iconName="{#v.lookupIcon}" size="small"/>
+                                                        <span class="slds-assistive-text">{#v.objectName}</span>
+                                                    </span>
+                                                </span>
+                                                <span class="slds-media__body singleRow">
+                                                    <span 
+                                                          class="optionTitle slds-listbox__option-text 
+                                                                 slds-listbox__option-text_entity">{#item.text}</span>
+                                                </span>
+                                            </span>
+                                        </li>
+                                    </aura:iteration> 
+                                </ul>
+                            </div>
+                        </aura:if> 
+                    </div>
+                </div>
+            </div>
+        </div> 
+    </div>     
+</aura:component>
+
+***********
+CONTROLLER
+***********
+({
+    itemSelected : function(component, event, helper) {
+        helper.itemSelected(component, event, helper);
+    }, 
+    serverCall :  function(component, event, helper) {
+        component.set("v.showLoading",true);
+        helper.serverCall(component, event, helper);
+    },
+    clearSelection : function(component, event, helper){
+        helper.clearSelection(component, event, helper);
+    } 
+})
+
+******
+HELPER
+******
+({
+	itemSelected : function(component, event, helper) {
+        var target = event.target;   
+        var SelIndex = helper.getIndexFrmParent(target,helper,"data-selectedIndex");  
+        if(SelIndex){
+            var serverResult = component.get("v.server_result");
+            var selItem = serverResult[SelIndex];
+            if(selItem.val){
+               component.set("v.selItem",selItem);
+               component.set("v.last_ServerResult",serverResult);
+            } 
+            component.set("v.server_result",null); 
+        } 
+	}, 
+    serverCall : function(component, event, helper) {  
+        var target = event.target;  
+        var searchText = target.value; 
+        var last_SearchText = component.get("v.last_SearchText");
+        //Escape button pressed 
+        if (event.keyCode == 27 || !searchText.trim()) { 
+            helper.clearSelection(component, event, helper);
+        }else if(searchText.trim() != last_SearchText  && /\s+$/.test(searchText) ){ 
+            //Save server call, if last text not changed
+            //Search only when space character entered
+         
+            var objectName = component.get("v.objectName");
+            var field_API_text = component.get("v.field_API_text");
+            var field_API_val = component.get("v.field_API_val");
+            var field_API_search = component.get("v.field_API_search");
+            var limit = component.get("v.limit");
+            
+            var action = component.get('c.searchDB');
+            //action.setStorable();
+            
+            action.setParams({
+                objectName : objectName,
+                fld_API_Text : field_API_text,
+                fld_API_Val : field_API_val,
+                lim : limit, 
+                fld_API_Search : field_API_search,
+                searchText : searchText
+            });
+    
+            action.setCallback(this,function(a){
+                this.handleResponse(a,component,helper);
+            });
+            
+            component.set("v.last_SearchText",searchText.trim());
+            console.log('Server call made');            
+            $A.enqueueAction(action); 
+        }else if(searchText && last_SearchText && searchText.trim() == last_SearchText.trim()){ 
+            component.set("v.server_result",component.get("v.last_ServerResult"));
+            console.log('Server call saved');
+            component.set("v.showLoading",false);
+        }         
+	},
+    handleResponse : function (res,component,helper){
+        if (res.getState() === 'SUCCESS') {
+            var retObj = JSON.parse(res.getReturnValue());
+            if(retObj.length <= 0){
+                var noResult = JSON.parse('[{"text":"No Results Found"}]');
+                component.set("v.server_result",noResult); 
+            	component.set("v.last_ServerResult",noResult);
+            }else{
+                component.set("v.server_result",retObj); 
+            	component.set("v.last_ServerResult",retObj);
+                component.set("v.showLoading",false);
+            }  
+        }else if (res.getState() === 'ERROR'){
+            var errors = res.getError();
+            if (errors) {
+                if (errors[0] && errors[0].message) {
+                    alert(errors[0].message);
+                    component.set("v.showLoading",false);
+                }
+            } 
+        }
+    },
+    getIndexFrmParent : function(target,helper,attributeToFind){
+        //User can click on any child element, so traverse till intended parent found
+        var SelIndex = target.getAttribute(attributeToFind);
+        while(!SelIndex){
+            target = target.parentNode ;
+			SelIndex = helper.getIndexFrmParent(target,helper,attributeToFind);           
+        }
+        return SelIndex;
+    },
+    clearSelection: function(component, event, helper){
+        component.set("v.selItem",null);
+        component.set("v.server_result",null);
+    } 
+})
